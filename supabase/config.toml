@@ -1,0 +1,26 @@
+project_id = "hznyxnacxjiozfjlfscs"
+
+[functions.submit-payment]
+verify_jwt = true
+
+[functions.verify-payment]
+verify_jwt = true
+
+[functions.validate-license]
+verify_jwt = false
+
+[functions.auto-expire-licenses]
+verify_jwt = false
+# Note: auto-expire-licenses uses secret-based auth instead of JWT
+
+[functions.connect-drive]
+verify_jwt = false
+
+[functions.refresh-drive-token]
+verify_jwt = false
+
+[functions.upload-invoice-to-drive]
+verify_jwt = false
+
+[functions.cleanup-invoices]
+verify_jwt = false
