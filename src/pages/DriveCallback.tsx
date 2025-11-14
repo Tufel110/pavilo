@@ -12,37 +12,39 @@ const DriveCallback = () => {
     const handleCallback = async () => {
       try {
         const params = new URLSearchParams(window.location.search);
-        const code = params.get('code');
-        const state = params.get('state'); // userId
-        const error = params.get('error');
+        const code = params.get("code");
+        const state = params.get("state"); // userId
+        const error = params.get("error");
 
         if (error) {
           throw new Error(`OAuth error: ${error}`);
         }
 
         if (!code || !state) {
-          throw new Error('Missing authorization code or user ID');
+          throw new Error("Missing authorization code or user ID");
         }
 
         setStatus("Connecting to Google Drive...");
 
-        // Call edge function to exchange code for tokens
-        const { data, error: functionError } = await supabase.functions.invoke('connect-drive', {
-          body: { code, userId: state }
+        // ✅ Updated to include environment flag for web
+        const { data, error: functionError } = await supabase.functions.invoke("connect-drive", {
+          body: { code, userId: state, env: "web" },
         });
 
         if (functionError) throw functionError;
 
         if (data?.success) {
-          toast.success('Google Drive connected successfully!');
-          navigate('/dashboard/settings');
+          toast.success("✅ Google Drive connected successfully!");
+          setStatus("Drive connected successfully!");
+          // Optional delay so user sees success
+          setTimeout(() => navigate("/dashboard/settings"), 1000);
         } else {
-          throw new Error('Failed to connect Drive');
+          throw new Error("Failed to connect Drive");
         }
       } catch (error) {
-        console.error('Drive callback error:', error);
-        toast.error('Failed to connect Google Drive. Please try again.');
-        navigate('/dashboard/settings');
+        console.error("Drive callback error:", error);
+        toast.error("❌ Failed to connect Google Drive. Please try again.");
+        setTimeout(() => navigate("/dashboard/settings"), 1000);
       }
     };
 
