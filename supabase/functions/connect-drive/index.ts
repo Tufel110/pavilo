@@ -63,15 +63,21 @@ serve(async (req) => {
 
     // ✅ Store tokens in Supabase
    // ✅ Store tokens in Supabase
-const { error: dbError } = await supabase.from("user_drive_tokens").upsert({
-  user_id: userId,
-  access_token: tokens.access_token,
-  refresh_token: tokens.refresh_token,
-  token_expiry: expiryTime, // ✅ correct column
-  scope: tokens.scope,
-  is_connected: true,
-  updated_at: new Date().toISOString(),
-});
+const { error: dbError } = await supabase
+  .from("user_drive_tokens")
+  .upsert(
+    {
+      user_id: userId,
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      token_expiry: expiryTime, // ✅ correct column
+      scope: tokens.scope,
+      is_connected: true,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" } // ✅ THIS IS THE FIX — update instead of insert
+  );
+
 
 
     if (dbError) {

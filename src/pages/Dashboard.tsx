@@ -48,13 +48,14 @@ const Dashboard = () => {
       }
 
       // ✅ 2. Check if Google Drive is connected
-      const { data: drive } = await supabase
-        .from("user_drive_tokens")
-        .select("id")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
+const { data: drive } = await supabase
+  .from("user_drive_tokens")
+  .select("is_connected")
+  .eq("user_id", session.user.id)
+  .maybeSingle();
 
-      setDriveConnected(!!drive);
+setDriveConnected(!!drive);
+
 
       // ✅ 3. Fetch user's business type
       const { data: profile } = await supabase
