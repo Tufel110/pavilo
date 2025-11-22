@@ -13,7 +13,7 @@ const authSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   fullName: z.string().min(2, "Name must be at least 2 characters").optional(),
-  businessType: z.enum(['general_store', 'apmc_vendor', 'shoe_clothes_retail']).optional(),
+  businessType: z.enum(['mini_dmart', 'anaj_vyapari', 'shoe_shop']).optional(),
 });
 
 const Auth = () => {
@@ -27,7 +27,7 @@ const Auth = () => {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       const validation = authSchema.safeParse({
         email,
@@ -49,6 +49,7 @@ const Auth = () => {
       setLoading(true);
 
       if (isSignUp) {
+        console.log("Starting sign up...");
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -66,36 +67,84 @@ const Auth = () => {
         toast.success("Account created! Please check your email to verify.");
         setIsSignUp(false);
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
+        toast.info("Starting sign in...");
+        console.log("Starting sign in...");
+
+        // Create a promise that resolves when auth state changes to SIGNED_IN
+        let authSubscription: any = null;
+        const signInSuccessPromise = new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            authSubscription?.unsubscribe();
+            reject(new Error("Request timed out"));
+          }, 30000); // Increased timeout to 30s
+
+          authSubscription = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' && session) {
+              console.log("Auth state change detected: SIGNED_IN");
+              clearTimeout(timeout);
+              authSubscription?.unsubscribe();
+              resolve();
+            }
+          });
         });
 
-        if (error) throw error;
+        // Initiate sign in (don't await the result, as it may hang)
+        supabase.auth.signInWithPassword({
+          email,
+          password,
+        }).catch(err => {
+          // Log but don't throw - we rely on state change listener
+          console.error("signInWithPassword error:", err);
+        });
+
+        // Wait for either SIGNED_IN event or timeout
+        await signInSuccessPromise;
+
+        toast.info("Sign in successful. Checking account...");
 
         // Check if user has active license
+        console.log("Checking session...");
         const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          const { data: license } = await supabase
-            .from("licenses")
-            .select("*")
-            .eq("user_id", session.user.id)
-            .eq("status", "active")
-            .gte("expires_at", new Date().toISOString())
-            .single();
+        console.log("Session:", session);
 
-          if (license) {
+        if (session) {
+          console.log("Checking license...");
+          // Wrap license check in try/catch to prevent blocking
+          try {
+            const { data: license, error: licenseError } = await supabase
+              .from("licenses")
+              .select("*")
+              .eq("user_id", session.user.id)
+              .eq("status", "active")
+              .gte("expires_at", new Date().toISOString())
+              .single();
+
+            console.log("License result:", { license, licenseError });
+
+            if (license) {
+              console.log("License found, navigating to dashboard...");
+              toast.success("Welcome back!");
+              navigate("/dashboard");
+            } else {
+              console.log("No license found, navigating to subscription...");
+              toast.success("Welcome! Please complete your subscription.");
+              navigate("/subscription");
+            }
+          } catch (err) {
+            console.error("License check error:", err);
+            // If license check fails (e.g. table missing), let them in or send to subscription?
+            // For now, send to dashboard to avoid blocking valid users if table is missing
+            console.log("License check failed, defaulting to dashboard access");
             toast.success("Welcome back!");
             navigate("/dashboard");
-          } else {
-            toast.success("Welcome! Please complete your subscription.");
-            navigate("/subscription");
           }
         }
       }
     } catch (error: any) {
+      console.error("Auth error:", error);
       toast.error(error.message || "Authentication failed");
     } finally {
+      console.log("Auth finally block, setting loading false");
       setLoading(false);
     }
   };
@@ -111,8 +160,8 @@ const Auth = () => {
             {isSignUp ? "Create your account" : "Welcome back"}
           </CardTitle>
           <CardDescription className="text-center">
-            {isSignUp 
-              ? "Start managing your business with Pavilo" 
+            {isSignUp
+              ? "Start managing your business with Pavilo"
               : "Enter your credentials to access your account"}
           </CardDescription>
         </CardHeader>
@@ -161,9 +210,9 @@ const Auth = () => {
                     <SelectValue placeholder="Select your business type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="general_store">General Store / Mini D-Mart</SelectItem>
-                    <SelectItem value="apmc_vendor">APMC / Anaj Vyapari (Wholesale)</SelectItem>
-                    <SelectItem value="shoe_clothes_retail">Shoe & Clothes Retail</SelectItem>
+                    <SelectItem value="mini_dmart">General Store / Mini D-Mart</SelectItem>
+                    <SelectItem value="anaj_vyapari">APMC / Anaj Vyapari (Wholesale)</SelectItem>
+                    <SelectItem value="shoe_shop">Shoe & Clothes Retail</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -177,8 +226,8 @@ const Auth = () => {
                 onClick={() => setIsSignUp(!isSignUp)}
                 className="text-primary hover:underline"
               >
-                {isSignUp 
-                  ? "Already have an account? Sign in" 
+                {isSignUp
+                  ? "Already have an account? Sign in"
                   : "Don't have an account? Sign up"}
               </button>
             </div>

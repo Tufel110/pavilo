@@ -48,13 +48,13 @@ const Dashboard = () => {
       }
 
       // ✅ 2. Check if Google Drive is connected
-const { data: drive } = await supabase
-  .from("user_drive_tokens")
-  .select("is_connected")
-  .eq("user_id", session.user.id)
-  .maybeSingle();
+      const { data: drive } = await supabase
+        .from("user_drive_tokens")
+        .select("is_connected")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
 
-setDriveConnected(!!drive);
+      setDriveConnected(!!drive);
 
 
       // ✅ 3. Fetch user's business type
@@ -126,7 +126,9 @@ setDriveConnected(!!drive);
       case "apmc_vendor":
         return <APMCDashboard />;
       case "shoe_clothes_retail":
-        return <ShoeClothesRetailDashboard />;
+        // Redirect to the new module
+        navigate("/dashboard/shoe-shop");
+        return null;
       default:
         return <GeneralStoreDashboard />; // Default fallback
     }
